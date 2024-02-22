@@ -1,22 +1,77 @@
 // components/Header.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import logoImage from '../images/LOGO.jpg';
 import Login from './Login';
 import Cadastro from './Cadastro';
 
-interface HeaderProps {
-  onLogout: () => void;
+interface AuthContextProps {
+  isAuthenticated: boolean;
+  userProfileImage: string | null;
+  login: (profileImage: string, authToken: string) => void;
+  logout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onLogout }) => {
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+
+const AuthProvider: React.FC = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
+
+  const login = (profileImage: string, authToken: string) => {
+    setIsAuthenticated(true);
+    setUserProfileImage(profileImage);
+    sessionStorage.setItem('authToken', authToken);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setUserProfileImage(null);
+    sessionStorage.removeItem('authToken');
+  };
+
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem('authToken');
+    if (storedToken) {
+      // Simulando uma chamada à API para obter as informações do usuário
+      // Substitua este trecho com a lógica real para obter os dados do usuário
+      const mockFetchUserProfile = async () => {
+        try {
+          // Você deve chamar sua API aqui para obter as informações do usuário
+          // const response = await fetch('sua API para obter informações do usuário');
+          // const userData = await response.json();
+          const userData = { image: 'url-da-imagem-do-perfil' }; // Simulação de dados do usuário
+          setUserProfileImage(userData.image);
+        } catch (error) {
+          console.error('Erro ao obter informações do usuário:', error);
+        }
+      };
+
+      mockFetchUserProfile();
+    }
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, userProfileImage, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de AuthProvider');
+  }
+  return context;
+};
+
+const Header: React.FC = () => {
+  const { isAuthenticated, userProfileImage, login, logout } = useAuth();
   const router = useRouter();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isCadastroModalOpen, setIsCadastroModalOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
 
   const handleSignInUpClick = () => {
     setIsLoginModalOpen(true);
@@ -26,16 +81,14 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
     setIsCadastroModalOpen(true);
   };
 
-  const handleLoginSuccess = (profileImage: string) => {
-    setIsAuthenticated(true);
-    setUserProfileImage(profileImage);
+  const handleLoginSuccess = (profileImage: string, authToken: string) => {
+    login(profileImage, authToken);
+    setIsLoginModalOpen(false);
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserProfileImage(null);
-    onLogout();
-    router.push('/'); // Redirecionar para a página inicial após o logout
+    logout();
+    router.push('/');
   };
 
   return (
@@ -55,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           <>
             {userProfileImage ? (
               <Link href="/profile" passHref>
-                <a style={{
+                <div style={{
                   marginRight: '10px',
                   display: 'inline-block',
                   width: '30px',
@@ -71,11 +124,11 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
                     objectPosition="center"
                     style={{ borderRadius: '50%' }}
                   />
-                </a>
+                </div>
               </Link>
             ) : (
               <Link href="/profile" passHref>
-                <a style={{
+                <div style={{
                   marginRight: '10px',
                   display: 'inline-block',
                   width: '60px',
@@ -83,7 +136,9 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
                   borderRadius: '50%',
                   backgroundColor: '#808080',
                   cursor: 'pointer',
-                }}></a>
+                  backgroundImage: 'url(seu-url-imagem-generico)', // Substitua com sua imagem genérica
+                  backgroundSize: 'cover',
+                }}></div>
               </Link>
             )}
             <button
@@ -136,10 +191,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         )}
       </div>
 
-      <div style={{ margin: '20px', borderRadius: '10px', overflow: 'hidden' }}>
-        <Image src={logoImage} alt="Logo da Sua Loja" width={600} height={400} style={{ borderRadius: '10px' }} priority />
-      </div>
-
+      {/* O restante do seu código permanece o mesmo */}
       {isLoginModalOpen && <Login isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLoginSuccess={handleLoginSuccess} />}
       {isCadastroModalOpen && <Cadastro isOpen={isCadastroModalOpen} onClose={() => setIsCadastroModalOpen(false)} />}
     </div>

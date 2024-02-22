@@ -28,15 +28,19 @@ const Login: React.FC<LoginProps> = ({ isOpen, onClose, onLoginSuccess }) => {
 
       if (response.ok) {
         const userData = await response.json();
-        const { profileImage } = userData;
+        const { token, profileImage } = userData;
+
+        // Armazene o token JWT no armazenamento local (localStorage)
+        localStorage.setItem('token', token);
+
         setLoginSucesso(true);
 
-        // Mensagem de sucesso e redirecionar para /profile após 2 segundos
+        // Mensagem de sucesso e redirecionar para / após 2 segundos
         setTimeout(() => {
           setLoginSucesso(false);
           onLoginSuccess(profileImage);
           onClose();
-          router.push('/profile');
+          router.push('/');
         }, 2000);
       } else {
         const errorData = await response.json();
